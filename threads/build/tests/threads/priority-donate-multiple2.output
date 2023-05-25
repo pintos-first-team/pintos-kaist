@@ -1,0 +1,32 @@
+Kernel command line: -q run priority-donate-multiple2
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  157,081,600 loops/s.
+Boot complete.
+Executing 'priority-donate-multiple2':
+(priority-donate-multiple2) begin
+(priority-donate-multiple2) Main thread should have priority 34.  Actual priority: 31.
+(priority-donate-multiple2) Main thread should have priority 36.  Actual priority: 31.
+(priority-donate-multiple2) Main thread should have priority 36.  Actual priority: 31.
+(priority-donate-multiple2) Threads b, a, c should have just finished, in that order.
+(priority-donate-multiple2) Main thread should have priority 31.  Actual priority: 31.
+(priority-donate-multiple2) Thread a acquired lock a.
+Interrupt 0x0d (#GP General Protection Exception) at rip=8004213a07
+ cr2=0000000000000000 error=               0
+rax 0720072007200720 rbx 0000000000000000 rcx 00000080040b8000 rdx 0720072007200720
+rsp 0000008004234f10 rbp 0000008004234f20 rsi 000000000000800f rdi 00000080040b8000
+rip 0000008004213a07 r8 0000008004234ebc  r9 0000000000000000 r10 0000000000000000
+r11 0000000000000000 r12 0000000000000000 r13 0000000000000000 r14 0000000000000000
+r15 0000000000000000 rflags 00000002
+es: 0010 ds: 0010 cs: 0008 ss: 0010
+Kernel PANIC at ../../threads/interrupt.c:361 in intr_handler(): Unexpected interrupt
+Call stack: 0x80042131a2 0x8004208764 0x8004208b16 0x8004213a5d 0x800420989c 0x8004209d5d 0x8004217e3e 0x8004207187.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 24 ticks
+Thread: 0 idle ticks, 24 kernel ticks, 0 user ticks
+Console: 1
