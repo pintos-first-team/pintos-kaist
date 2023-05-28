@@ -28,6 +28,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+// Sleep queue. blocked state인 프로세스들이 저장된다.
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -92,13 +95,23 @@ static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
    It is not safe to call thread_current() until this function
    finishes. */
+/* 현재 실행 중인 코드를 스레드로 변환하여 스레딩 시스템을 초기화합니다.
+    이는 일반적으로 작동할 수 없으며, 이 경우에만 가능한 이유는
+	loader.S가 스택의 맨 아래를 페이지 경계에 놓도록 주의했기 때문입니다.
+
+	또한 실행 대기열(run queue)과 tid 락을 초기화합니다.
+
+	이 함수를 호출한 후에는 thread_create()로 스레드를 생성하기 전에 페이지 할당자(page allocator)를 초기화해야 합니다.
+
+	이 함수가 완료될 때까지 thread_current()를 호출하는 것은 안전하지 않습니다. */
 void
 thread_init (void) {
 	ASSERT (intr_get_level () == INTR_OFF);
 
 	/* Reload the temporal gdt for the kernel
 	 * This gdt does not include the user context.
-	 * The kernel will rebuild the gdt with user context, in gdt_init (). */
+	 * The kernel will rebuild the gdt with user context, in gdt_init (). */ 
+
 	struct desc_ptr gdt_ds = {
 		.size = sizeof (gdt) - 1,
 		.address = (uint64_t) gdt
@@ -108,6 +121,7 @@ thread_init (void) {
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
 	list_init (&ready_list);
+	list_init (&sleep_list);
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -294,6 +308,10 @@ thread_exit (void) {
 
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
+/* 현재 실행중인 스레드가 CPU를 양보한다.
+   즉 현재 스레드는 ready state가 되고 스케쥴러는 실행 대기 중인
+   다른 스레드 중 하나를 실행한다. 현재 스레드는 sleep 되지 않기에
+   스케쥴러의 재량에 따라 즉시 다시 스케쥴링 될 수 있습니다 */
 void
 thread_yield (void) {
 	struct thread *curr = thread_current ();
@@ -302,10 +320,27 @@ thread_yield (void) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
+	 // 인터럽트 비활성화
 	if (curr != idle_thread)
+		// 레디 큐에 현재 스레드의 리스트 요소를 넣는다
 		list_push_back (&ready_list, &curr->elem);
+	// 스케쥴링이 뭔지 이해하고 다시 분석하자
 	do_schedule (THREAD_READY);
-	intr_set_level (old_level);
+	intr_set_level (old_level); // 인터럽트 활성화
+}
+
+void
+thread_sleep(int64_t ticks) {
+	struct thread *curr = thread_current();
+
+	if (curr != idle_thread) {
+		int64_t curr_tick = timer_ticks();
+		curr->status = THREAD_BLOCKED;
+		curr->wakeup_tick = curr_tick + ticks;
+		// global tick 업데이트
+		// schedule 함수 호출
+		// thread list를 다루는 중이라면, interrupt를 비활성화
+	}
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
