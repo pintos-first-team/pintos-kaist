@@ -24,6 +24,7 @@
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
 
+static struct list sleep_list;
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -44,7 +45,7 @@ static struct list destruction_req;
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
-
+int64_t global_tick;
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
@@ -62,6 +63,9 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+static bool wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED);
+void wake_up(int64_t ticks);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -109,6 +113,8 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	// 새로 만든 sleep_list도 초기화
+	list_init (&sleep_list);
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -194,7 +200,7 @@ thread_create (const char *name, int priority,
 	tid = t->tid = allocate_tid ();
 
 	/* Call the kernel_thread if it scheduled.
-	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
+	 * Note rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t) kernel_thread;
 	t->tf.R.rdi = (uint64_t) function;
 	t->tf.R.rsi = (uint64_t) aux;
@@ -296,18 +302,63 @@ thread_exit (void) {
    may be scheduled again immediately at the scheduler's whim. */
 void
 thread_yield (void) {
-	struct thread *curr = thread_current ();
+	struct thread *curr = thread_current (); // 현재 thread 포인터 저장
 	enum intr_level old_level;
 
 	ASSERT (!intr_context ());
 
-	old_level = intr_disable ();
+	old_level = intr_disable (); // 인터럽트가 꺼지면, , 다른 쓰레드는 진행중인 쓰레드를 선점할 수 없음
 	if (curr != idle_thread)
 		list_push_back (&ready_list, &curr->elem);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
 
+void thread_sleep(int64_t ticks) 
+{	
+	struct thread *curr = thread_current (); 
+	enum intr_level old_level;
+	old_level = intr_disable (); // 인터럽트 비활성화
+
+	if(curr != idle_thread){
+		curr->wakeup_tick = ticks; // 현재 시간에 특정 시간을 더한 값을 할당
+		// list_push_back(&sleep_list, &curr->elem);
+		// list_sort(&sleep_list, wakeup_less, NULL);
+		list_insert_ordered(&sleep_list, &curr->elem, wakeup_less, NULL); 
+		thread_block(); // 블럭 시키고
+		// if (global_tick > curr->wakeup_tick){
+		// 	global_tick = curr->wakeup_tick;
+		// }
+	}
+	intr_set_level(old_level);	// 인터럽트 활성화
+}
+
+void wake_up(int64_t ticks){
+	struct thread *check;
+	while (!list_empty(&sleep_list)){
+		check = list_front(&sleep_list);
+
+		if (check->wakeup_tick <= ticks){
+			list_pop_front(&sleep_list);
+			list_push_back (&ready_list, &check->elem);
+			thread_unblock(check);
+		}
+		else {
+			break;
+		}
+	}
+	// while (!list_empty(&sleep_list)){
+	// 	if (global_tick <= ticks){
+	// 		list_pop_front(&sleep_list);
+	// 		list_push_back (&ready_list, &check->elem);
+	// 		thread_unblock(check);
+	// 	}
+	// 	check = list_front(&sleep_list);
+	// 	if (global_tick > check->wakeup_tick) {
+	// 		global_tick = check->wakeup_tick;
+	// 	}
+	// }
+}
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
@@ -587,4 +638,13 @@ allocate_tid (void) {
 	lock_release (&tid_lock);
 
 	return tid;
+}
+static bool
+wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
+{
+  const struct thread *a = list_entry (a_, struct thread, elem);
+  const struct thread *b = list_entry (b_, struct thread, elem);
+  
+  return a->wakeup_tick < b->wakeup_tick;
 }
