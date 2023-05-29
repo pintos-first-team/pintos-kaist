@@ -344,12 +344,7 @@ thread_sleep(int64_t ticks) {
 	if (curr != idle_thread) {
 		curr->wakeup_tick = ticks;
 		// wakeup tick을 기준으로 오름차순 정렬 후 삽입
-		list_insert_ordered(
-			&sleep_list,
-			&curr->elem,
-			compare_wakeup_tick,
-			NULL
-		);
+		list_insert_ordered(&sleep_list, &curr->elem, compare_wakeup_tick, NULL);
 		thread_block();
 	}
 	intr_set_level(old_level);
@@ -371,9 +366,11 @@ void
 thread_wakeup(int64_t ticks) {
 	while (!list_empty(&sleep_list)) {
 		struct thread *curr_thread = list_entry(list_front(&sleep_list), struct thread, elem);
+
 		if (curr_thread->wakeup_tick > ticks) {
 			break;
 		}
+		
 		list_pop_front(&sleep_list);
 		thread_unblock(curr_thread);
 	}
