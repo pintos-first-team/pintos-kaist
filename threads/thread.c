@@ -28,6 +28,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+// sleep list 정의
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -62,6 +65,8 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+static bool wakeup_less (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
+
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -108,6 +113,7 @@ thread_init (void) {
 	/* Init the globla thread context */
 	lock_init (&tid_lock);
 	list_init (&ready_list);
+	list_init (&sleep_list);
 	list_init (&destruction_req);
 
 	/* Set up a thread structure for the running thread. */
@@ -307,6 +313,55 @@ thread_yield (void) {
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
+
+// thread_sleep 추가
+void 
+thread_sleep (int64_t ticks){
+	
+	struct thread *curr = thread_current(); // 현재 스레드 curr에 저장
+	
+	// 우선 interrupt disable로 변경
+	enum intr_level old_level; // intr_level = {INTR_OFF, INTR_ON}
+	ASSERT (!intr_context());
+	old_level = intr_disable();
+
+	// 현재 스레드가 idle(쉬는 상태) 스레드가 아니면 
+	if (curr != idle_thread){
+		// sleep_list에 시간이 가장 적게남은 스레드를 맨앞으로 정렬하여 list추가 -> global tick 안써도 됨
+		list_insert_ordered (&sleep_list, &curr->elem, wakeup_less, NULL);
+		// wake up을 위해 local tick 저장
+		curr->wakeup_tick = ticks;
+		// 스레드 상태 blocked 상태로 바꾸고 schedule() 호출
+		thread_block();
+	}
+
+	// interrupt 다시 able로 변경
+	intr_set_level (old_level);
+}
+
+
+// thread_wakeup 추가
+void
+thread_wakeup(int64_t ticks){
+	
+	struct thread *hd_sleep_list;
+	
+	// 시간 체크해서 wakeup_tick보다 크거나 같으면 sleep queue 에서 running queue
+	while (list_empty(&sleep_list) != 0){
+		// sleep_list 맨 앞 스레드 wakcup_ticq 보다 ticks가 커지면 ready_list로 보내기
+		hd_sleep_list = list_front(&sleep_list);
+		if (hd_sleep_list->wakeup_tick <= ticks){
+			list_pop_front(&sleep_list);
+			list_push_back(&ready_list, &(hd_sleep_list->elem));
+			// ready_list로 추가하고 unblock해주기
+			thread_unblock(hd_sleep_list);
+			}
+		else
+			break;
+	}
+}
+
+
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
@@ -587,4 +642,15 @@ allocate_tid (void) {
 	lock_release (&tid_lock);
 
 	return tid;
+}
+
+// list_insert_odered 3번째 매개변수 활용. list의 element를 스레드 찾아서 스레드로 반환. 
+// 남은 시간이 적은 스레드 비교해주는 함수
+static bool
+wakeup_less (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux UNUSED) {
+  
+  const struct thread *a = list_entry (a_elem, struct thread, elem);
+  const struct thread *b = list_entry (b_elem, struct thread, elem);
+  
+  return a->wakeup_tick < b->wakeup_tick;
 }
