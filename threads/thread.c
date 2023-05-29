@@ -322,13 +322,8 @@ void thread_sleep(int64_t ticks)
 
 	if(curr != idle_thread){
 		curr->wakeup_tick = ticks; // 현재 시간에 특정 시간을 더한 값을 할당
-		// list_push_back(&sleep_list, &curr->elem);
-		// list_sort(&sleep_list, wakeup_less, NULL);
 		list_insert_ordered(&sleep_list, &curr->elem, wakeup_less, NULL); 
 		thread_block(); // 블럭 시키고
-		// if (global_tick > curr->wakeup_tick){
-		// 	global_tick = curr->wakeup_tick;
-		// }
 	}
 	intr_set_level(old_level);	// 인터럽트 활성화
 }
@@ -336,28 +331,15 @@ void thread_sleep(int64_t ticks)
 void wake_up(int64_t ticks){
 	struct thread *check;
 	while (!list_empty(&sleep_list)){
-		check = list_front(&sleep_list);
-
+		check = list_entry (list_front(&sleep_list), struct thread, elem);
 		if (check->wakeup_tick <= ticks){
 			list_pop_front(&sleep_list);
-			list_push_back (&ready_list, &check->elem);
 			thread_unblock(check);
 		}
 		else {
 			break;
 		}
 	}
-	// while (!list_empty(&sleep_list)){
-	// 	if (global_tick <= ticks){
-	// 		list_pop_front(&sleep_list);
-	// 		list_push_back (&ready_list, &check->elem);
-	// 		thread_unblock(check);
-	// 	}
-	// 	check = list_front(&sleep_list);
-	// 	if (global_tick > check->wakeup_tick) {
-	// 		global_tick = check->wakeup_tick;
-	// 	}
-	// }
 }
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
