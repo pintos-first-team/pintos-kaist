@@ -351,6 +351,7 @@ thread_sleep(int64_t ticks) {
 		int64_t wakeup_tick = curr_tick + ticks;
 		curr->status = THREAD_BLOCKED;
 		curr->wakeup_tick = wakeup_tick;
+		list_push_back(&sleep_list, &curr->elem);
 
 		// global tick 업데이트
 		if (wakeup_tick < global_tick || list_empty(&sleep_list)) {
