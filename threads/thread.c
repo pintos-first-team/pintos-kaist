@@ -65,6 +65,12 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+bool 
+compare_wakeup_tick(
+	const struct list_elem *a,
+	const struct list_elem *b,
+	void *aux
+);
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -81,15 +87,6 @@ static tid_t allocate_tid (void);
 // Because the gdt will be setup after the thread_init, we should
 // setup temporal gdt first.
 static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
-
-// Global tick
-// 함수의 리턴 값으로 전역 변수를 초기화 할 수 없다.
-// 그런데 init.c 파일의 main 함수를 건드리면 안되지 않나?
-// thread_init 함수에서 처리해야 하나?
-// thread_init은 어떤 함수인가..? 스레드를 만드는 함수..
-// 그런데 글로벌 틱이 매번 달라지나?
-int64_t global_tick;
-
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -333,8 +330,7 @@ thread_yield (void) {
 	if (curr != idle_thread)
 		// 레디 큐에 현재 스레드의 리스트 요소를 넣는다
 		list_push_back (&ready_list, &curr->elem);
-	// 스케쥴링이 뭔지 이해하고 다시 분석하자
-	do_schedule (THREAD_READY);
+	do_schedule (THREAD_READY); // 현재 실행중인 스레드를 ready로 변경
 	intr_set_level (old_level); // 인터럽트 활성화
 }
 
@@ -343,27 +339,44 @@ thread_sleep(int64_t ticks) {
 	struct thread *curr = thread_current();
 	enum intr_level old_level;
 
-	old_level = intr_disable();
+	old_level = intr_disable(); // 인터럽트 비활성화
 
-	if (curr != idle_thread) { // 현재 스레드가 유휴 스레드가 아니라면
-		int64_t curr_tick = timer_ticks();
-		// 혹시 값을 더하면 정수 값을 초과할 수 있나?
-		int64_t wakeup_tick = curr_tick + ticks;
-		curr->status = THREAD_BLOCKED;
-		curr->wakeup_tick = wakeup_tick;
-		list_push_back(&sleep_list, &curr->elem);
-
-		// global tick 업데이트
-		if (wakeup_tick < global_tick || list_empty(&sleep_list)) {
-			global_tick = wakeup_tick;
-		}
-		
-		// 인터럽트 비활성화
-		// 현재 실행중인 스레드를 blocked 상태로 변경하고 다른 스레드를 실행한다.
-		do_schedule(THREAD_BLOCKED);
-		// thread list를 다루는 중이라면, interrupt를 비활성화
+	if (curr != idle_thread) {
+		curr->wakeup_tick = ticks;
+		// wakeup tick을 기준으로 오름차순 정렬 후 삽입
+		list_insert_ordered(
+			&sleep_list,
+			&curr->elem,
+			compare_wakeup_tick,
+			NULL
+		);
+		thread_block();
 	}
 	intr_set_level(old_level);
+}
+
+bool
+compare_wakeup_tick(
+	const struct list_elem *a,
+	const struct list_elem *b,
+	void *aux
+) {
+	struct thread *t1 = list_entry(a, struct thread, elem);
+	struct thread *t2 = list_entry(b, struct thread, elem);
+
+	return t1->wakeup_tick < t2->wakeup_tick;
+}
+
+void
+thread_wakeup(int64_t ticks) {
+	while (!list_empty(&sleep_list)) {
+		struct thread *curr_thread = list_entry(list_front(&sleep_list), struct thread, elem);
+		if (curr_thread->wakeup_tick > ticks) {
+			break;
+		}
+		list_pop_front(&sleep_list);
+		thread_unblock(curr_thread);
+	}
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
