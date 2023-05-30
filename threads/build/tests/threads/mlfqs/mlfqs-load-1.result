@@ -1,11 +1,11 @@
 FAIL
-Kernel panic in run: PANIC at ../../tests/threads/tests.c:93 in fail(): test failed
-Call stack: 0x80042133a0 0x80042169a2 0x80042199de 0x80042167dc 0x8004206636 0x8004206783 0x8004206120
+Kernel panic in run: PANIC at ../../threads/thread.c:257 in thread_unblock(): assertion `t->status == THREAD_BLOCKED' failed.
+Call stack: 0x8004213464 0x8004206de8 0x8004207207 0x800420d232 0x8004208990 0x8004208dae 0x8004207384
 Translation of call stack:
-0x00000080042133a0: debug_panic (lib/kernel/debug.c:32)
-0x00000080042169a2: pass (tests/threads/tests.c:99)
-0x00000080042199de: test_mlfqs_load_1 (tests/threads/mlfqs/mlfqs-load-1.c:31)
-0x00000080042167dc: run_test (tests/threads/tests.c:57)
-0x0000008004206636: run_task (threads/init.c:252)
-0x0000008004206783: run_actions (threads/init.c:297)
-0x0000008004206120: main (threads/init.c:125)
+0x0000008004213464: debug_panic (lib/kernel/debug.c:32)
+0x0000008004206de8: thread_unblock (threads/thread.c:261)
+0x0000008004207207: thread_wakeup (threads/thread.c:363)
+0x000000800420d232: timer_interrupt (devices/timer.c:130)
+0x0000008004208990: intr_handler (threads/interrupt.c:352)
+0x0000008004208dae: intr_entry (threads/intr-stubs.o:?)
+0x0000008004207384: kernel_thread (threads/thread.c:461)

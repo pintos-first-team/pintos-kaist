@@ -1,25 +1,11 @@
 FAIL
-Test output failed to match any acceptable form.
-
-Acceptable output:
-  (priority-donate-lower) begin
-  (priority-donate-lower) Main thread should have priority 41.  Actual priority: 41.
-  (priority-donate-lower) Lowering base priority...
-  (priority-donate-lower) Main thread should have priority 41.  Actual priority: 41.
-  (priority-donate-lower) acquire: got the lock
-  (priority-donate-lower) acquire: done
-  (priority-donate-lower) acquire must already have finished.
-  (priority-donate-lower) Main thread should have priority 21.  Actual priority: 21.
-  (priority-donate-lower) end
-Differences in `diff -u' format:
-  (priority-donate-lower) begin
-- (priority-donate-lower) Main thread should have priority 41.  Actual priority: 41.
-+ (priority-donate-lower) Main thread should have priority 41.  Actual priority: 31.
-  (priority-donate-lower) Lowering base priority...
-- (priority-donate-lower) Main thread should have priority 41.  Actual priority: 41.
-- (priority-donate-lower) acquire: got the lock
-- (priority-donate-lower) acquire: done
-+ (priority-donate-lower) Main thread should have priority 41.  Actual priority: 21.
-  (priority-donate-lower) acquire must already have finished.
-  (priority-donate-lower) Main thread should have priority 21.  Actual priority: 21.
-  (priority-donate-lower) end
+Kernel panic in run: PANIC at ../../threads/thread.c:257 in thread_unblock(): assertion `t->status == THREAD_BLOCKED' failed.
+Call stack: 0x8004213464 0x8004206de8 0x8004207207 0x800420d232 0x8004208990 0x8004208dae 0x8004207384
+Translation of call stack:
+0x0000008004213464: debug_panic (lib/kernel/debug.c:32)
+0x0000008004206de8: thread_unblock (threads/thread.c:261)
+0x0000008004207207: thread_wakeup (threads/thread.c:363)
+0x000000800420d232: timer_interrupt (devices/timer.c:130)
+0x0000008004208990: intr_handler (threads/interrupt.c:352)
+0x0000008004208dae: intr_entry (threads/intr-stubs.o:?)
+0x0000008004207384: kernel_thread (threads/thread.c:461)

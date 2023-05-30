@@ -4,17 +4,11 @@ Kernel command line: -q run priority-change
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  157,081,600 loops/s.
-Boot complete.
-Executing 'priority-change':
-(priority-change) begin
-(priority-change) Creating a high-priority thread 2.
-(priority-change) Thread 2 should have just lowered its priority.
-(priority-change) Thread 2 should have just exited.
-(priority-change) end
-Execution of 'priority-change' complete.
-Timer: 24 ticks
-Thread: 0 idle ticks, 24 kernel ticks, 0 user ticks
-Console: 603 characters output
-Keyboard: 0 keys pressed
-Powering off...
+Calibrating timer...  Kernel PANIC at ../../threads/thread.c:257 in thread_unblock(): assertion `t->status == THREAD_BLOCKED' failed.
+Call stack: 0x8004213464 0x8004206de8 0x8004207207 0x800420d232 0x8004208990 0x8004208dae 0x8004207384.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 5 ticks
+Thread: 1 idle ticks, 4 kernel ticks, 0 user ticks
+Console: 
