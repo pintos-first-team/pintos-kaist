@@ -4,11 +4,17 @@ Kernel command line: -q -mlfqs run mlfqs-load-1
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  Kernel PANIC at ../../threads/thread.c:257 in thread_unblock(): assertion `t->status == THREAD_BLOCKED' failed.
-Call stack: 0x8004213464 0x8004206de8 0x8004207207 0x800420d232 0x8004208990 0x8004208dae 0x8004207384.
+Calibrating timer...  157,081,600 loops/s.
+Boot complete.
+Executing 'mlfqs-load-1':
+(mlfqs-load-1) begin
+(mlfqs-load-1) spinning for up to 45 seconds, please wait...
+(mlfqs-load-1) FAIL: load average stayed below 0.5 for more than 45 seconds
+Kernel PANIC at ../../tests/threads/tests.c:93 in fail(): test failed
+Call stack: 0x800421348d 0x8004216a8f 0x8004219acb 0x80042168c9 0x8004206636 0x8004206783 0x8004206120.
 The `backtrace' program can make call stacks useful.
 Read "Backtraces" in the "Debugging Tools" chapter
 of the Pintos documentation for more information.
-Timer: 5 ticks
-Thread: 1 idle ticks, 4 kernel ticks, 0 user ticks
+Timer: 4623 ticks
+Thread: 0 idle ticks, 4623 kernel ticks, 0 user ticks
 Console: 
