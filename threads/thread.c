@@ -66,7 +66,7 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 bool 
-compare_wakeup_tick(
+cmp_wakeup_tick(
 	const struct list_elem *a,
 	const struct list_elem *b,
 	void *aux
@@ -209,8 +209,8 @@ thread_create (const char *name, int priority,
 	if (t == NULL)
 		return TID_ERROR;
 
-	/* Initialize thread. */
-	init_thread (t, name, priority);
+	/* Initialize thread(blocked status). */
+	init_thread (t, name, priority); // aux?
 	tid = t->tid = allocate_tid ();
 
 	/* Call the kernel_thread if it scheduled.
@@ -224,8 +224,15 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
-	/* Add to run queue. */
+	// 스레드를 레디큐에 삽입
 	thread_unblock (t);
+
+	struct thread *curr_t = thread_current();
+
+	if (t->priority > curr_t->priority) {
+		// 생성한 스레드의 우선순위가 더 높다면 현재 스레드는 CPU를 양보한다.
+		thread_yield();
+	}
 
 	return tid;
 }
@@ -260,7 +267,8 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	// 스레드를 오름차순으로 준비큐에 삽입
+	list_insert_ordered(&ready_list, &t->elem, cmp_priority, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -329,7 +337,8 @@ thread_yield (void) {
 	 // 인터럽트 비활성화
 	if (curr != idle_thread)
 		// 레디 큐에 현재 스레드의 리스트 요소를 넣는다
-		list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, cmp_priority, NULL);
+		
 	do_schedule (THREAD_READY); // 현재 실행중인 스레드를 ready로 변경
 	intr_set_level (old_level); // 인터럽트 활성화
 }
@@ -344,14 +353,14 @@ thread_sleep(int64_t ticks) {
 	if (curr != idle_thread) {
 		curr->wakeup_tick = ticks;
 		// wakeup tick을 기준으로 오름차순 정렬 후 삽입
-		list_insert_ordered(&sleep_list, &curr->elem, compare_wakeup_tick, NULL);
+		list_insert_ordered(&sleep_list, &curr->elem, cmp_wakeup_tick, NULL);
 		thread_block();
 	}
 	intr_set_level(old_level);
 }
 
 bool
-compare_wakeup_tick(
+cmp_wakeup_tick(
 	const struct list_elem *a,
 	const struct list_elem *b,
 	void *aux
@@ -360,6 +369,18 @@ compare_wakeup_tick(
 	struct thread *t2 = list_entry(b, struct thread, elem);
 
 	return t1->wakeup_tick < t2->wakeup_tick;
+}
+
+bool
+cmp_priority(
+	const struct list_elem *a,
+	const struct list_elem *b,
+	void *aux
+) {
+	struct thread *t1 = list_entry(a, struct thread, elem);
+	struct thread *t2 = list_entry(b, struct thread, elem);
+	// priority은 내림차순 정렬이니까 등호를 반대로 설정해보자
+	return t1->priority > t2->priority;
 }
 
 void
@@ -379,7 +400,27 @@ thread_wakeup(int64_t ticks) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
+	struct thread *curr_thread = thread_current();
+	curr_thread->priority = new_priority;
+
+	if (list_empty(&ready_list)) {
+		return;
+	}
+
+	struct thread *front_thread = list_entry(list_front(&ready_list), struct thread, elem);
+
+	// readylist의 맨 앞 스레드와 비교해서 부족하면 cpu를 양보한다.
+	if (curr_thread->priority < front_thread->priority) {
+		thread_yield();
+	}
+
+	// thread_current()->priority = new_priority;
+	// if(!list_empty(&ready_list)) {
+	// 	struct thread *next_thread = list_entry(list_front(&ready_list), struct thread, elem);
+	// 	if (new_priority < next_thread->priority) {
+	// 		thread_yield();
+	// 	}
+	// }
 }
 
 /* Returns the current thread's priority. */
