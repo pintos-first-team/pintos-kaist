@@ -23,7 +23,7 @@
 /* Random value for basic thread
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
-
+static struct list sleep_list;
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -62,6 +62,7 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -109,6 +110,8 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	// 새로 만든 sleep_list도 초기화
+	list_init (&sleep_list);
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();
@@ -181,6 +184,7 @@ thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
 	struct thread *t;
 	tid_t tid;
+	struct thread *curr = thread_current ();
 
 	ASSERT (function != NULL);
 
@@ -194,7 +198,7 @@ thread_create (const char *name, int priority,
 	tid = t->tid = allocate_tid ();
 
 	/* Call the kernel_thread if it scheduled.
-	 * Note) rdi is 1st argument, and rsi is 2nd argument. */
+	 * Note rdi is 1st argument, and rsi is 2nd argument. */
 	t->tf.rip = (uintptr_t) kernel_thread;
 	t->tf.R.rdi = (uint64_t) function;
 	t->tf.R.rsi = (uint64_t) aux;
@@ -203,10 +207,11 @@ thread_create (const char *name, int priority,
 	t->tf.ss = SEL_KDSEG;
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
-
+	
 	/* Add to run queue. */
 	thread_unblock (t);
-
+	priority_preempt();
+	
 	return tid;
 }
 
@@ -237,10 +242,11 @@ thread_unblock (struct thread *t) {
 	enum intr_level old_level;
 
 	ASSERT (is_thread (t));
-
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+
+	// list_push_back (&ready_list, &t->elem);
+	list_insert_ordered(&ready_list, &t->elem, priority_sort, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -253,7 +259,7 @@ thread_name (void) {
 
 /* Returns the running thread.
    This is running_thread() plus a couple of sanity checks.
-   See the big comment at the top of thread.h for details. */
+   See the big comment at the top ofs thread.h for details. */
 struct thread *
 thread_current (void) {
 	struct thread *t = running_thread ();
@@ -296,22 +302,53 @@ thread_exit (void) {
    may be scheduled again immediately at the scheduler's whim. */
 void
 thread_yield (void) {
-	struct thread *curr = thread_current ();
+	struct thread *curr = thread_current (); // 현재 thread 포인터 저장
 	enum intr_level old_level;
 
 	ASSERT (!intr_context ());
 
-	old_level = intr_disable ();
+	old_level = intr_disable (); // 인터럽트가 꺼지면, , 다른 쓰레드는 진행중인 쓰레드를 선점할 수 없음
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, priority_sort, NULL); 
+		// list_push_back (&ready_list, &curr->elem);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
 
+void thread_sleep(int64_t ticks) 
+{	
+	struct thread *curr = thread_current (); 
+	enum intr_level old_level;
+	old_level = intr_disable (); // 인터럽트 비활성화
+
+	if(curr != idle_thread){
+		curr->wakeup_tick = ticks; // 현재 시간에 특정 시간을 더한 값을 할당
+		list_insert_ordered(&sleep_list, &curr->elem, wakeup_sort, NULL); 
+		thread_block(); // 블럭 시키고
+	}
+	intr_set_level(old_level);	// 인터럽트 활성화
+}
+
+void wake_up(int64_t ticks){
+	struct thread *check;
+	while (!list_empty(&sleep_list)){
+		check = list_entry (list_front(&sleep_list), struct thread, elem);
+		if (check->wakeup_tick <= ticks){
+			list_pop_front(&sleep_list);
+			thread_unblock(check);
+		}
+		else {
+			break;
+		}
+	}
+}
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
+
+	thread_current ()->original_priority = new_priority;
+	refresh_priority();
+	priority_preempt();
 }
 
 /* Returns the current thread's priority. */
@@ -409,6 +446,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	// 새로운 변수 초기화
+	list_init(&t->donations);
+	t->original_priority = priority;
+	t->wait_on_lock = NULL;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -587,4 +628,32 @@ allocate_tid (void) {
 	lock_release (&tid_lock);
 
 	return tid;
+}
+void donate_priority(void){
+	struct thread *cur = thread_current();
+    struct lock *lock = cur->wait_on_lock;
+    int depth = 0;
+    
+    while (lock && (depth < 8))
+    {
+        if (!lock->holder)
+            return;
+		if (lock->holder->priority >= cur->priority)
+			return;
+
+		lock->holder->priority = cur->priority; // 도네이션
+		cur = cur->wait_on_lock->holder;
+		lock = cur->wait_on_lock;
+		depth++;
+    }
+}
+
+void priority_preempt(void){
+	struct thread *curr = thread_current();
+	if(!list_empty(&ready_list)){
+		struct thread *ready_first = list_entry(list_front(&ready_list),struct thread, elem);
+		if (curr->priority < ready_first->priority){
+				thread_yield();
+			}
+	}
 }
