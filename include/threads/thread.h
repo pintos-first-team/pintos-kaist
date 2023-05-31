@@ -148,4 +148,10 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 
+// synch.c에서 쓰기 위해
+bool cmp_priority (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux UNUSED);
+
+// ready_list의 맨안 쓰레드의 priority vs 현재 쓰레드의 priority
+void priority_preemption (void);
+
 #endif /* threads/thread.h */

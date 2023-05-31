@@ -31,9 +31,6 @@ static struct list ready_list;
 // sleep list 정의
 static struct list sleep_list;
 
-// wait list 정의
-static struct list wait_list;
-
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -69,7 +66,6 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 static bool wakeup_less (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux UNUSED);
-static bool cmp_priority (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux UNUSED);
 void thread_wakeup(int64_t ticks);
 
 /* Returns true if T appears to point to a valid thread. */
@@ -364,8 +360,8 @@ thread_wakeup(int64_t ticks){
 	
 	// 시간 체크해서 wakeup_tick보다 크거나 같으면 sleep queue 에서 running queue
 	while (!list_empty(&sleep_list)){
-		// sleep_list 맨 앞 스레드 wakeup_tick 보다 ticks가 커지면 ready_list로 보내기
 		hd_sleep_list = list_entry(list_front(&sleep_list), struct thread, elem);
+		// sleep_list 맨 앞 스레드 wakeup_tick 보다 ticks가 커지면 ready_list로 보내기
 		if (hd_sleep_list->wakeup_tick <= ticks){
 			list_pop_front(&sleep_list);
 			// ready_list로 추가하고 thread 상태 unblock(ready)해주기
@@ -679,11 +675,25 @@ wakeup_less (const struct list_elem *a_elem, const struct list_elem *b_elem, voi
 
 // list_insert_ordered 3번째 매개변수 활용. list의 element를 스레드 찾아서 스레드로 반환. 
 // 우선순위 높은 스레드 비교해주는 함수
-static bool
+bool
 cmp_priority (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux UNUSED) {
   
   const struct thread *a = list_entry (a_elem, struct thread, elem);
   const struct thread *b = list_entry (b_elem, struct thread, elem);
   
   return a->priority > b->priority;
+}
+
+// 현재 쓰레드 priority < ready_list 맨 앞 쓰레드 priority 이면, 현재 쓰레드 thread_yield(); 
+void 
+priority_preemption (void) {
+	struct thread *curr = thread_current();
+	if(!list_empty(&ready_list)){
+		// ready_list 맨 앞 쓰레드 가져오기
+		struct thread *hd_ready_list = list_entry(list_front(&ready_list), struct thread, elem);
+		// 현재 쓰레드 priority < ready_list 맨 앞 쓰레드 priority 이면, 현재 쓰레드 thread_yield();
+		if (curr->priority < hd_ready_list->priority){
+			thread_yield();
+		}
+	}
 }

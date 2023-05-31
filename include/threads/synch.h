@@ -38,6 +38,8 @@ void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
+bool cmp_sem_priority (const struct list_elem *a_elem, const struct list_elem *b_elem, void *aux);
+
 /* Optimization barrier.
  *
  * The compiler will not reorder operations across an

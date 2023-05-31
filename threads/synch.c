@@ -57,6 +57,7 @@ sema_init (struct semaphore *sema, unsigned value) {
    interrupts disabled, but if it sleeps then the next scheduled
    thread will probably turn interrupts back on. This is
    sema_down function. */
+// lock_acquire 에서 실행 됨.
 void
 sema_down (struct semaphore *sema) {
 	enum intr_level old_level;
@@ -65,11 +66,15 @@ sema_down (struct semaphore *sema) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
+	// seam->value가 0이면, 공유자원 누군가 사용하고 있는 상황. -> waiter에 넣어줘야함.
 	while (sema->value == 0) {
-		list_push_back (&sema->waiters, &thread_current ()->elem);
+		// list_push_back (&sema->waiters, &thread_current ()->elem);
+		list_insert_ordered (&sema->waiters, &thread_current ()->elem, cmp_priority, NULL);
 		thread_block ();
 	}
+	// 공유자원 사용여부와 관계없이 value는 -1. (공유자원 쓰는 스레드 끝나면 +1씩 해서 0되면 다시 사용가능상태)
 	sema->value--;
+
 	intr_set_level (old_level);
 }
 
@@ -102,6 +107,7 @@ sema_try_down (struct semaphore *sema) {
    and wakes up one thread of those waiting for SEMA, if any.
 
    This function may be called from an interrupt handler. */
+// lock_release에서 실행
 void
 sema_up (struct semaphore *sema) {
 	enum intr_level old_level;
@@ -109,10 +115,15 @@ sema_up (struct semaphore *sema) {
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
-	if (!list_empty (&sema->waiters))
-		thread_unblock (list_entry (list_pop_front (&sema->waiters),
-					struct thread, elem));
+	if (!list_empty (&sema->waiters)){
+		list_sort (&sema->waiters, cmp_priority, NULL);
+		thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
+	}
 	sema->value++;
+
+	// 현재 쓰레드 priority < ready_list 맨 앞 쓰레드 priority 이면, 현재 쓰레드 thread_yield();
+	priority_preemption();
+
 	intr_set_level (old_level);
 }
 
@@ -188,8 +199,13 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	// // priority donation 수행. ('락을 점유하고 있는 스레드 PRI' < '락을 요청하는 스레드 PRI' 이면 donation)
+	// if (lock->holder!=NULL && lock->holder->priority < thread_current()->priority){
+	// 	lock->holder->priority = thread_current()->priority;
+	// }
+
 	sema_down (&lock->semaphore);
-	lock->holder = thread_current ();
+	lock->holder = thread_current ();	
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -282,7 +298,8 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	sema_init (&waiter.semaphore, 0);
-	list_push_back (&cond->waiters, &waiter.elem);
+	// cond->waiters에 priority 순서대로 넣어줌 
+	list_insert_ordered (&cond->waiters, &waiter.elem, cmp_sem_priority, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
@@ -302,9 +319,10 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
 
-	if (!list_empty (&cond->waiters))
-		sema_up (&list_entry (list_pop_front (&cond->waiters),
-					struct semaphore_elem, elem)->semaphore);
+	if (!list_empty (&cond->waiters)){
+		list_sort (&cond->waiters, cmp_sem_priority, NULL);
+		sema_up (&list_entry (list_pop_front (&cond->waiters), struct semaphore_elem, elem)->semaphore);
+	}	
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
@@ -321,3 +339,21 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 	while (!list_empty (&cond->waiters))
 		cond_signal (cond, lock);
 }
+
+bool
+cmp_sem_priority(const struct list_elem *a, const struct list_elem *b, void *aux) {
+    // cond 에서 seamphore_elem 가져옴 
+	struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
+    struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
+
+	// semaphore_elem 으로 waiters 접근 list 다 가져오기 
+    struct list *la = &sa->semaphore.waiters;
+    struct list *lb = &sb->semaphore.waiters;
+    
+	// list_begin() : list의 첫번째 반환
+	// thread로 접근하여 priority 값 비교
+    struct thread *ta = list_entry(list_begin(la), struct thread, elem);
+    struct thread *tb = list_entry(list_begin(lb), struct thread, elem);
+    
+	return ta->priority > tb->priority;
+ }
