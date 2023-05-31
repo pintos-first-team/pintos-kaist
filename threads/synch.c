@@ -194,6 +194,7 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	// sempaphore의 value가 0이라면 semaphore의 waiters list에 들어가게 된다.
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
 }
@@ -229,6 +230,8 @@ lock_release (struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	lock->holder = NULL;
+	// semaphore의 value를 1 올리고, semaphore의 waiters list에서 가장 우선순위가 높은
+	// 스레드를 ready_list에 넣는다. 이후 스레드의 우선순위를 비교해서 더 높은 스레드를 실행
 	sema_up (&lock->semaphore);
 }
 
@@ -241,7 +244,7 @@ lock_held_by_current_thread (const struct lock *lock) {
 
 	return lock->holder == thread_current ();
 }
-
+
 /* One semaphore in a list. */
 struct semaphore_elem {
 	struct list_elem elem;              /* List element. */
@@ -251,11 +254,31 @@ struct semaphore_elem {
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
    code to receive the signal and act upon it. */
+/* 조건 변수 COND를 초기화합니다. 조건 변수를 사용하면 한 코드 조각이 조건을 신호로 보내고,
+   협력하는 코드가 해당 신호를 수신하여 작동할 수 있습니다. */
 void
 cond_init (struct condition *cond) {
 	ASSERT (cond != NULL);
 
 	list_init (&cond->waiters);
+}
+
+bool cmp_sem_priority(
+	const struct list_elem *a,
+	const struct list_elem *b,
+	void *aux
+) {
+    struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
+    struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
+    
+	struct list *la = &sa->semaphore.waiters;
+    struct list *lb = &sb->semaphore.waiters;
+    
+	//list_begin() : list의 첫번째 반환
+    struct thread *ta = list_entry(list_begin(la), struct thread, elem);
+    struct thread *tb = list_entry(list_begin(lb), struct thread, elem);
+    
+	return ta->priority > tb->priority;
 }
 
 /* Atomically releases LOCK and waits for COND to be signaled by
@@ -278,6 +301,22 @@ cond_init (struct condition *cond) {
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
    we need to sleep. */
+/* 이 함수는 원자적으로 LOCK을 해제하고, 다른 코드 조각에서 COND가 신호를 보낼 때까지 
+   대기합니다. COND가 신호를 보낸 후, 이 함수는 반환하기 전에 LOCK을 재획득합니다.
+   이 함수를 호출하기 전에 LOCK이 보유되어야 합니다.
+
+   이 함수에 의해 구현된 모니터는 "Hoare" 스타일이 아닌 "Mesa" 스타일입니다.
+   즉, 신호를 보내는 것과 받는 것이 원자적인 연산이 아닙니다.
+   따라서 대기가 완료된 후에 일반적으로 호출자는 조건을 다시 확인해야 하며,
+   필요한 경우 다시 대기해야 합니다.
+
+   주어진 조건 변수는 단일 lock에만 연관되지만,
+   하나의 lock은 여러 개의 조건 변수와 연관될 수 있습니다.
+   즉, lock에서 조건 변수로의 매핑은 일대다 관계입니다.
+
+   이 함수는 잠들 수 있으므로 인터럽트 핸들러 내에서 호출해서는 안 됩니다.
+   이 함수는 인터럽트를 비활성화한 상태에서 호출할 수 있지만,
+   잠들어야 한다면 인터럽트가 다시 켜집니다. */
 void
 cond_wait (struct condition *cond, struct lock *lock) {
 	struct semaphore_elem waiter;
@@ -289,7 +328,8 @@ cond_wait (struct condition *cond, struct lock *lock) {
 
 	sema_init (&waiter.semaphore, 0);
 	// list_push_back (&cond->waiters, &waiter.elem);
-	list_insert_ordered(&cond->waiters, &waiter.elem, cmp_priority, NULL);
+	// semaphore_elem
+	list_insert_ordered(&cond->waiters, &waiter.elem, cmp_sem_priority, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
@@ -311,7 +351,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 
 	if (!list_empty (&cond->waiters)) {
 		// 대기 중 우선순위 변경 가능성이 있어 재 정렬
-		list_sort(&cond->waiters, cmp_priority, NULL);
+		list_sort(&cond->waiters, cmp_sem_priority, NULL);
 		// 여기 코드를 좀 분석
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
