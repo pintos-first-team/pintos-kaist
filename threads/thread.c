@@ -358,6 +358,20 @@ thread_sleep(int64_t ticks) {
 	}
 	intr_set_level(old_level);
 }
+/* 현재 스레드의 우선순위와 ready_list에서 우선순위가 가장 높은 스레드를 비교하고
+   더 높은 스레드가 cpu를 점유 하도록 한다. */
+void
+thread_preempt(void){
+    struct thread *curr = thread_current();
+	if (list_empty(&ready_list)) {
+		return;
+	}
+
+	struct thread *ready_first = list_entry(list_front(&ready_list), struct thread, elem);
+	if (curr->priority < ready_first->priority) {
+		thread_yield();
+	}
+}
 
 bool
 cmp_wakeup_tick(
@@ -403,24 +417,7 @@ thread_set_priority (int new_priority) {
 	struct thread *curr_thread = thread_current();
 	curr_thread->priority = new_priority;
 
-	if (list_empty(&ready_list)) {
-		return;
-	}
-
-	struct thread *front_thread = list_entry(list_front(&ready_list), struct thread, elem);
-
-	// readylist의 맨 앞 스레드와 비교해서 부족하면 cpu를 양보한다.
-	if (curr_thread->priority < front_thread->priority) {
-		thread_yield();
-	}
-
-	// thread_current()->priority = new_priority;
-	// if(!list_empty(&ready_list)) {
-	// 	struct thread *next_thread = list_entry(list_front(&ready_list), struct thread, elem);
-	// 	if (new_priority < next_thread->priority) {
-	// 		thread_yield();
-	// 	}
-	// }
+	thread_preempt();
 }
 
 /* Returns the current thread's priority. */

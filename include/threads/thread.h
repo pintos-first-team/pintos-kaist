@@ -147,6 +147,8 @@ void do_iret (struct intr_frame *tf);
 void thread_sleep(int64_t ticks);
 void thread_wakeup(int64_t ticks);
 
+void thread_preempt(void);
+
 bool
 cmp_priority(
 	const struct list_elem *a,
