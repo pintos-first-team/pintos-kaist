@@ -24,6 +24,7 @@
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
 
+static struct list donors_list;
 static struct list sleep_list;
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -45,7 +46,7 @@ static struct list destruction_req;
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
-int64_t global_tick;
+
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
@@ -66,6 +67,7 @@ static tid_t allocate_tid (void);
 static bool wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
             void *aux UNUSED);
 void wake_up(int64_t ticks);
+
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -187,6 +189,7 @@ thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
 	struct thread *t;
 	tid_t tid;
+	struct thread *curr = thread_current ();
 
 	ASSERT (function != NULL);
 
@@ -209,9 +212,15 @@ thread_create (const char *name, int priority,
 	t->tf.ss = SEL_KDSEG;
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
-
+	
 	/* Add to run queue. */
 	thread_unblock (t);
+
+	// 만약에 현재 돌고 있는 우선순위보다 새롭게 만들어진 우선순위가 높으면 yield 호출
+	if (curr->priority < t->priority){
+		thread_yield();
+	}
+
 
 	return tid;
 }
@@ -246,7 +255,8 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	// list_push_back (&ready_list, &t->elem);
+	list_insert_ordered(&ready_list, &t->elem, priority_more, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -259,7 +269,7 @@ thread_name (void) {
 
 /* Returns the running thread.
    This is running_thread() plus a couple of sanity checks.
-   See the big comment at the top of thread.h for details. */
+   See the big comment at the top ofs thread.h for details. */
 struct thread *
 thread_current (void) {
 	struct thread *t = running_thread ();
@@ -309,7 +319,8 @@ thread_yield (void) {
 
 	old_level = intr_disable (); // 인터럽트가 꺼지면, , 다른 쓰레드는 진행중인 쓰레드를 선점할 수 없음
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		list_insert_ordered(&ready_list, &curr->elem, priority_more, NULL); 
+		// list_push_back (&ready_list, &curr->elem);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }
@@ -344,7 +355,15 @@ void wake_up(int64_t ticks){
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
+
 	thread_current ()->priority = new_priority;
+	if (!list_empty(&ready_list)){
+		struct thread *next_thread = list_entry (list_front(&ready_list), struct thread, elem);
+		if(new_priority < next_thread->priority){
+			thread_yield();
+		}
+	}
+
 }
 
 /* Returns the current thread's priority. */
@@ -442,6 +461,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	list_init(&t->donations);
+	t->original_priority = NULL;
+	t->wait_on_lock = NULL;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -629,4 +651,32 @@ wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
   const struct thread *b = list_entry (b_, struct thread, elem);
   
   return a->wakeup_tick < b->wakeup_tick;
+}
+
+bool
+priority_more (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
+{
+  const struct thread *a = list_entry (a_, struct thread, elem);
+  const struct thread *b = list_entry (b_, struct thread, elem);
+  
+  return a->priority > b->priority;
+}
+
+void donate_priority(void){
+	struct thread *cur = thread_current();
+    struct lock *lock = cur->wait_on_lock;
+    int depth = 0;
+    
+    while (lock && (depth < 8))
+    {
+        if (!lock->holder)
+            return;
+        if (lock->holder->priority >= cur->priority)
+            return;
+
+        lock->holder->priority = cur->priority; // 도네이션
+        lock = lock->holder->wait_on_lock;
+        depth++;
+    }
 }

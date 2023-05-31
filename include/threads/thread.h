@@ -92,8 +92,10 @@ struct thread {
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 	int64_t wakeup_tick;                 // local tick 변수 설정 int64
-
 	/* Shared between thread.c and synch.c. */
+	struct lock *wait_on_lock;
+	struct list donations;
+	int original_priority;
 	struct list_elem elem;              /* List element. */
 
 #ifdef USERPROG
@@ -144,5 +146,8 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 void wake_up(int64_t ticks);
 void do_iret (struct intr_frame *tf);
+bool priority_more (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED);
+void donate_priority(void);
 
 #endif /* threads/thread.h */
