@@ -149,5 +149,5 @@ void do_iret (struct intr_frame *tf);
 bool priority_more (const struct list_elem *a_, const struct list_elem *b_,
             void *aux UNUSED);
 void donate_priority(void);
-
+void priority_preempt(void);
 #endif /* threads/thread.h */

@@ -215,11 +215,12 @@ thread_create (const char *name, int priority,
 	
 	/* Add to run queue. */
 	thread_unblock (t);
-
-	// 만약에 현재 돌고 있는 우선순위보다 새롭게 만들어진 우선순위가 높으면 yield 호출
+	
 	if (curr->priority < t->priority){
-		thread_yield();
+			thread_yield();
 	}
+	// 만약에 현재 돌고 있는 우선순위보다 새롭게 만들어진 우선순위가 높으면 yield 호출
+	
 
 
 	return tid;
@@ -252,9 +253,9 @@ thread_unblock (struct thread *t) {
 	enum intr_level old_level;
 
 	ASSERT (is_thread (t));
-
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
+
 	// list_push_back (&ready_list, &t->elem);
 	list_insert_ordered(&ready_list, &t->elem, priority_more, NULL);
 	t->status = THREAD_READY;
@@ -663,6 +664,7 @@ priority_more (const struct list_elem *a_, const struct list_elem *b_,
   return a->priority > b->priority;
 }
 
+
 void donate_priority(void){
 	struct thread *cur = thread_current();
     struct lock *lock = cur->wait_on_lock;
@@ -679,4 +681,14 @@ void donate_priority(void){
         lock = lock->holder->wait_on_lock;
         depth++;
     }
+}
+
+void priority_preempt(void){
+	struct thread *curr = thread_current();
+	if(!list_empty(&ready_list)){
+		struct thread *ready_first = list_entry(list_front(&ready_list),struct thread, elem);
+		if (curr->priority < ready_first->priority){
+				thread_yield();
+			}
+	}
 }
