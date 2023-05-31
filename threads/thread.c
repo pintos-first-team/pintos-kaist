@@ -252,7 +252,7 @@ thread_unblock (struct thread *t) {
 	ASSERT (t->status == THREAD_BLOCKED);
 
 	// list_push_back (&ready_list, &t->elem);
-	list_insert_ordered(&ready_list, &t->elem, priority_more, NULL);
+	list_insert_ordered(&ready_list, &t->elem, priority_sort, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -315,7 +315,7 @@ thread_yield (void) {
 
 	old_level = intr_disable (); // 인터럽트가 꺼지면, , 다른 쓰레드는 진행중인 쓰레드를 선점할 수 없음
 	if (curr != idle_thread)
-		list_insert_ordered(&ready_list, &curr->elem, priority_more, NULL); 
+		list_insert_ordered(&ready_list, &curr->elem, priority_sort, NULL); 
 		// list_push_back (&ready_list, &curr->elem);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
@@ -329,7 +329,7 @@ void thread_sleep(int64_t ticks)
 
 	if(curr != idle_thread){
 		curr->wakeup_tick = ticks; // 현재 시간에 특정 시간을 더한 값을 할당
-		list_insert_ordered(&sleep_list, &curr->elem, wakeup_less, NULL); 
+		list_insert_ordered(&sleep_list, &curr->elem, wakeup_sort, NULL); 
 		thread_block(); // 블럭 시키고
 	}
 	intr_set_level(old_level);	// 인터럽트 활성화
@@ -635,36 +635,6 @@ allocate_tid (void) {
 
 	return tid;
 }
-bool
-wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
-            void *aux UNUSED) 
-{
-  const struct thread *a = list_entry (a_, struct thread, elem);
-  const struct thread *b = list_entry (b_, struct thread, elem);
-  
-  return a->wakeup_tick < b->wakeup_tick;
-}
-
-bool
-priority_more (const struct list_elem *a_, const struct list_elem *b_,
-            void *aux UNUSED) 
-{
-  const struct thread *a = list_entry (a_, struct thread, elem);
-  const struct thread *b = list_entry (b_, struct thread, elem);
-  
-  return a->priority > b->priority;
-}
-
-bool
-donation_more (const struct list_elem *a_, const struct list_elem *b_,
-            void *aux UNUSED) 
-{
-  const struct thread *a = list_entry (a_, struct thread, donation_elem);
-  const struct thread *b = list_entry (b_, struct thread, donation_elem);
-  
-  return a->priority > b->priority;
-}
-
 void donate_priority(void){
 	struct thread *cur = thread_current();
     struct lock *lock = cur->wait_on_lock;

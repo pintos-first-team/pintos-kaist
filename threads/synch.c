@@ -66,7 +66,7 @@ sema_down (struct semaphore *sema) {
 	old_level = intr_disable ();
 
 	while (sema->value == 0) {
-		list_insert_ordered(&sema->waiters, &thread_current()->elem, priority_more, NULL);
+		list_insert_ordered(&sema->waiters, &thread_current()->elem, priority_sort, NULL);
 		donate_priority();
 		thread_block ();
 	}
@@ -111,7 +111,7 @@ sema_up (struct semaphore *sema) {
 
 	old_level = intr_disable ();
 	if (!list_empty(&sema->waiters)){
-		list_sort(&sema->waiters, priority_more, NULL);
+		list_sort(&sema->waiters, priority_sort, NULL);
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
 	}
@@ -193,7 +193,7 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!lock_held_by_current_thread (lock));
 	if(lock->holder != NULL){
 		thread_current()->wait_on_lock = lock;
-		list_insert_ordered(&lock->holder->donations, &thread_current()->donation_elem, donation_more, NULL);
+		list_insert_ordered(&lock->holder->donations, &thread_current()->donation_elem, donation_sort, NULL);
 		donate_priority();
 	}
 	sema_down (&lock->semaphore);
@@ -386,4 +386,35 @@ void remove_with_lock(struct lock *lock){
 		}
 		li = list_next(li);
 	}
+}
+
+
+bool
+wakeup_sort (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
+{
+  const struct thread *a = list_entry (a_, struct thread, elem);
+  const struct thread *b = list_entry (b_, struct thread, elem);
+  
+  return a->wakeup_tick < b->wakeup_tick;
+}
+
+bool
+priority_sort (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
+{
+  const struct thread *a = list_entry (a_, struct thread, elem);
+  const struct thread *b = list_entry (b_, struct thread, elem);
+  
+  return a->priority > b->priority;
+}
+
+bool
+donation_sort (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
+{
+  const struct thread *a = list_entry (a_, struct thread, donation_elem);
+  const struct thread *b = list_entry (b_, struct thread, donation_elem);
+  
+  return a->priority > b->priority;
 }

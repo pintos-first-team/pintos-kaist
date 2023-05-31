@@ -148,12 +148,6 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 void wake_up(int64_t ticks);
 void do_iret (struct intr_frame *tf);
-bool wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
-            void *aux UNUSED);
-bool priority_more (const struct list_elem *a_, const struct list_elem *b_,
-            void *aux UNUSED);
-bool donation_more (const struct list_elem *a_, const struct list_elem *b_,
-            void *aux UNUSED) ;
 void donate_priority(void);
 void priority_preempt(void);
 #endif /* threads/thread.h */
