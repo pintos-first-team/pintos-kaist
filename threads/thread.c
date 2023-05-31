@@ -210,14 +210,8 @@ thread_create (const char *name, int priority,
 	
 	/* Add to run queue. */
 	thread_unblock (t);
+	priority_preempt();
 	
-	if (curr->priority < t->priority){
-			thread_yield();
-	}
-	// 만약에 현재 돌고 있는 우선순위보다 새롭게 만들어진 우선순위가 높으면 yield 호출
-	
-
-
 	return tid;
 }
 
@@ -353,7 +347,7 @@ void
 thread_set_priority (int new_priority) {
 
 	thread_current ()->original_priority = new_priority;
-	donate_priority();
+	refresh_priority();
 	priority_preempt();
 }
 

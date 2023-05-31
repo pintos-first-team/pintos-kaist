@@ -67,7 +67,6 @@ sema_down (struct semaphore *sema) {
 
 	while (sema->value == 0) {
 		list_insert_ordered(&sema->waiters, &thread_current()->elem, priority_sort, NULL);
-		donate_priority();
 		thread_block ();
 	}
 	sema->value--;
@@ -104,7 +103,7 @@ sema_try_down (struct semaphore *sema) {
 
    This function may be called from an interrupt handler. */
 void
-sema_up (struct semaphore *sema) {
+sema_up (struct semaphore *sema) { // check
 	enum intr_level old_level;
 
 	ASSERT (sema != NULL);
@@ -238,16 +237,17 @@ lock_release (struct lock *lock) {
 
 void 
 refresh_priority(void){
-	/* 우선 다시 우선순위 원래대로 복원해주고*/
-	thread_current()->priority = thread_current()->original_priority;
+	struct thread *curr = thread_current();
 	/*현재 도네이션이 비어있는지 아닌지 체크*/
-	struct list donation_list = thread_current()->donations;
+	struct list *donation_list = &(curr->donations);
 	/*비어있지 않으면, 도네이션 리스트의 첫번째 값이 현재 priority보다 높으면 변경*/
-	if (!list_empty(&donation_list)){
-		struct thread *donation_first = list_entry(list_front(&donation_list), struct thread, elem);
-		if(thread_current()->priority < donation_first->priority){
-			thread_current()->priority = donation_first->priority;
-		}
+	if (list_empty(donation_list)){
+		/* 우선 다시 우선순위 원래대로 복원해주고*/
+		curr->priority = curr->original_priority;
+	} else {
+		list_sort(donation_list, donation_sort, NULL);
+		struct thread *donation_first = list_entry(list_front(donation_list), struct thread, donation_elem);
+		curr->priority = donation_first->priority;
 	}
 }
 
