@@ -23,8 +23,6 @@
 /* Random value for basic thread
    Do not modify this value. */
 #define THREAD_BASIC 0xd42df210
-
-static struct list donors_list;
 static struct list sleep_list;
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
@@ -354,14 +352,9 @@ void wake_up(int64_t ticks){
 void
 thread_set_priority (int new_priority) {
 
-	thread_current ()->priority = new_priority;
-	if (!list_empty(&ready_list)){
-		struct thread *next_thread = list_entry (list_front(&ready_list), struct thread, elem);
-		if(new_priority < next_thread->priority){
-			thread_yield();
-		}
-	}
-
+	thread_current ()->original_priority = new_priority;
+	donate_priority();
+	priority_preempt();
 }
 
 /* Returns the current thread's priority. */
@@ -459,6 +452,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	// 새로운 변수 초기화
 	list_init(&t->donations);
 	t->original_priority = priority;
 	t->wait_on_lock = NULL;
@@ -661,6 +655,15 @@ priority_more (const struct list_elem *a_, const struct list_elem *b_,
   return a->priority > b->priority;
 }
 
+bool
+donation_more (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
+{
+  const struct thread *a = list_entry (a_, struct thread, donation_elem);
+  const struct thread *b = list_entry (b_, struct thread, donation_elem);
+  
+  return a->priority > b->priority;
+}
 
 void donate_priority(void){
 	struct thread *cur = thread_current();
@@ -671,12 +674,13 @@ void donate_priority(void){
     {
         if (!lock->holder)
             return;
-        if (lock->holder->priority >= cur->priority)
-            return;
+		if (lock->holder->priority >= cur->priority)
+			return;
 
-        lock->holder->priority = cur->priority; // 도네이션
-        lock = lock->holder->wait_on_lock;
-        depth++;
+		lock->holder->priority = cur->priority; // 도네이션
+		cur = cur->wait_on_lock->holder;
+		lock = cur->wait_on_lock;
+		depth++;
     }
 }
 

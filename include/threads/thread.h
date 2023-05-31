@@ -97,6 +97,7 @@ struct thread {
 
 	struct lock *wait_on_lock;
 	struct list donations;
+	struct list_elem donation_elem;
 	int original_priority;
 
 #ifdef USERPROG
@@ -151,6 +152,8 @@ bool wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
             void *aux UNUSED);
 bool priority_more (const struct list_elem *a_, const struct list_elem *b_,
             void *aux UNUSED);
+bool donation_more (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) ;
 void donate_priority(void);
 void priority_preempt(void);
 #endif /* threads/thread.h */
