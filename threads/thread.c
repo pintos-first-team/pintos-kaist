@@ -64,9 +64,6 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
-static bool wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
-            void *aux UNUSED);
-void wake_up(int64_t ticks);
 
 
 /* Returns true if T appears to point to a valid thread. */
@@ -463,7 +460,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
 	list_init(&t->donations);
-	t->original_priority = NULL;
+	t->original_priority = priority;
 	t->wait_on_lock = NULL;
 }
 
@@ -644,7 +641,7 @@ allocate_tid (void) {
 
 	return tid;
 }
-static bool
+bool
 wakeup_less (const struct list_elem *a_, const struct list_elem *b_,
             void *aux UNUSED) 
 {
