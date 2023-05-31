@@ -95,10 +95,10 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
-	struct lock *wait_on_lock;
-	struct list donations;
-	struct list_elem donation_elem;
-	int original_priority;
+	struct lock *wait_on_lock;       /* 현재 쓰레드가 어떤 lock을 기다리고 있는지*/
+	struct list donations;	            /* 도네이션이 가능한 모든 목록*/
+	struct list_elem donation_elem;     /* 도네이션 리스트에 넣을 주소*/
+	int original_priority;	            /* 본래의 우선순위*/
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
