@@ -93,10 +93,10 @@ struct thread {
 	int priority;                       /* Priority. */
 	int64_t wakeup_tick;
 	
-	int original_priority;
-	struct lock *wait_on_lock; // 해당 스레드가 대기하고 있는 lock 자료구조 주소
-	struct list donation_list; // multiple doncation 리스트
-	struct list_elem d_elem; // donation 리스트의 요소
+	int original_priority; // 초기화 할 때 받은 우선순위(변경 x)
+	struct lock *wait_on_lock;
+	struct list donation_list;
+	struct list_elem d_elem;
 
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */

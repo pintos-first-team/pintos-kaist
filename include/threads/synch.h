@@ -46,6 +46,18 @@ bool cmp_sem_priority(
 	void *aux
 );
 
+// Priority donation
+// 도네이션 리스트 요소 비교 함수
+bool cmp_don_priority(
+	const struct list_elem *a,
+	const struct list_elem *b,
+	void *aux
+);
+void donate_priority(void);
+void remove_with_lock(struct lock *lock);
+void refresh_priority(void);
+
+
 /* Optimization barrier.
  *
  * The compiler will not reorder operations across an

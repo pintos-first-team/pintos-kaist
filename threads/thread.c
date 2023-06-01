@@ -415,7 +415,9 @@ thread_wakeup(int64_t ticks) {
 void
 thread_set_priority (int new_priority) {
 	struct thread *curr_thread = thread_current();
-	curr_thread->priority = new_priority;
+	curr_thread->original_priority = new_priority;
+	
+	refresh_priority(); // 우선순위 변경으로 인한 donation 관련 정보 갱신
 
 	thread_preempt();
 }
