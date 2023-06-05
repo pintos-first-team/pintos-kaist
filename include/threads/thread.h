@@ -110,6 +110,16 @@ struct thread {
 
 	// wakeup을 위해 local tick 저장용도
 	int64_t wakeup_tick;
+
+	// donation 위해 추가한 필드
+	// 해당 쓰레드가 대기하고 있는 lock자료구조의 주소를 저장할 필드
+	struct lock * wait_on_lock;
+	// multiple donation을 고려하기 위한 리스트
+	struct list donations;
+	// 위의 리스트 elem 값 저장을 위한 변수
+	struct list_elem d_elem; 
+	// 원래 priority
+	int origin_priority;
 };
 
 /* If false (default), use round-robin scheduler.
@@ -153,5 +163,7 @@ bool cmp_priority (const struct list_elem *a_elem, const struct list_elem *b_ele
 
 // ready_list의 맨안 쓰레드의 priority vs 현재 쓰레드의 priority
 void priority_preemption (void);
+
+
 
 #endif /* threads/thread.h */

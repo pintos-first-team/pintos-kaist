@@ -1,1 +1,10 @@
-PASS
+FAIL
+Kernel panic in run: PANIC at ../../tests/threads/priority-fifo.c:43 in test_priority_fifo(): assertion `thread_get_priority () == PRI_DEFAULT' failed.
+Call stack: 0x80042139d7 0x80042190e4 0x8004216e13 0x8004206636 0x8004206783 0x8004206120
+Translation of call stack:
+0x00000080042139d7: debug_panic (lib/kernel/debug.c:32)
+0x00000080042190e4: test_priority_fifo (tests/threads/priority-fifo.c:45)
+0x0000008004216e13: run_test (tests/threads/tests.c:57)
+0x0000008004206636: run_task (threads/init.c:252)
+0x0000008004206783: run_actions (threads/init.c:297)
+0x0000008004206120: main (threads/init.c:125)

@@ -199,13 +199,37 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
-	// // priority donation 수행. ('락을 점유하고 있는 스레드 PRI' < '락을 요청하는 스레드 PRI' 이면 donation)
-	// if (lock->holder!=NULL && lock->holder->priority < thread_current()->priority){
-	// 	lock->holder->priority = thread_current()->priority;
-	// }
+	struct thread *curr = thread_current();
 
+	// lock의 holder가 존재하여 wait을 하게 되면
+	if (lock->holder != NULL){
+		// wait을 하게될 lock 자료구조 포인터 저장
+		curr->wait_on_lock = lock;
+		
+		if (curr->priority > lock->holder->origin_priority){
+			// lock의 현재 holder의 대기자 list에 추가
+			if (list_empty(&lock->semaphore.waiters)) // waiters 처음이면
+				list_push_back(&lock->holder->donations, &curr->d_elem);
+			// lock에 새로들어온 스레드값이 waiters의 가장 큰값이면 donation 업데이트
+			else if (list_entry(list_front(&lock->semaphore.waiters), struct thread, elem)->priority < curr->priority){ 
+				struct list_elem *e;
+				for (e = list_begin(&lock->holder->donations); e != list_end(&lock->holder->donations); e = list_next(e)){
+					struct thread *t = list_entry(e, struct thread, d_elem);
+					if (lock == t->wait_on_lock){ // lock이 wait_on_lock인 경우
+						list_remove(&t->d_elem);
+						list_insert_ordered(&t->donations, &curr->d_elem, donation_sort, NULL);
+						break;
+					} 
+				}
+			}
+			// priority donation을 수행하는 코드 추가
+			donate_priority();
+		}	
+	}
+	// lock획득 후 lock의 holder 갱신
 	sema_down (&lock->semaphore);
-	lock->holder = thread_current ();	
+	lock->holder = curr;
+	curr->wait_on_lock = NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -237,6 +261,12 @@ void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
+
+	// donation list 에서 스레드 제거
+	remove_with_lock(lock);
+
+	// 우선순위 다시 계산 필요
+	refresh_priority();
 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
@@ -357,3 +387,61 @@ cmp_sem_priority(const struct list_elem *a, const struct list_elem *b, void *aux
     
 	return ta->priority > tb->priority;
  }
+
+// lock을 가진 스레드에 priority donation을 수행하는 함수
+void
+donate_priority(void){
+	struct thread *curr = thread_current();
+	struct thread *holder; 
+
+	//현재 스레드가 priority가 높으므로 donation요청온것
+	int priority = curr->priority;
+
+	// donation 수행 
+	while(curr->wait_on_lock != NULL){
+		holder = curr->wait_on_lock->holder;
+		holder->priority = priority;
+		curr = holder;
+	}
+}
+
+
+bool donation_sort(const struct list_elem *a, const struct list_elem *b, void *aux) {
+    struct thread *da = list_entry(a, struct thread, d_elem);
+    struct thread *db = list_entry(b, struct thread, d_elem);
+
+    return da->priority > db->priority;
+}
+
+// lock을 해지했을때, waiters 리스트에서 해당 엔트리 삭제를 위한 함수
+void remove_with_lock(struct lock *lock){
+	struct list *donation_list = &(thread_current()->donations);
+	if(list_empty(donation_list))
+		return;
+	
+	struct list_elem *hd_d_elem = list_front(donation_list);
+	struct thread *donation_thread;
+
+	while(hd_d_elem != list_tail(donation_list)){
+		donation_thread = list_entry(hd_d_elem, struct thread, d_elem);
+		if(donation_thread->wait_on_lock == lock){ // 삭제해야될 엔트리 이면
+			list_remove(&donation_thread->d_elem);
+		}
+		hd_d_elem = list_next(hd_d_elem);
+	}
+
+}
+
+// 쓰레드 priority 변경되면, donation 고려하여 우선순위 다시 결정
+void refresh_priority(void){
+	struct thread *curr = thread_current();
+	struct list *donations = &(curr->donations);
+	if(list_empty(donations)){
+		// 우선순위 donate 받기전의 origin_priority로 변경
+		curr->priority = curr->origin_priority;
+		return;
+	}
+	// donation중 priority가 가장 높은 값
+	list_sort(donations, donation_sort, NULL);
+	curr->priority = list_entry(list_front(donations), struct thread, d_elem)->priority;
+}

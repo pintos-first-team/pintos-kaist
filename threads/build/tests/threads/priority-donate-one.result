@@ -1,27 +1,10 @@
 FAIL
-Test output failed to match any acceptable form.
-
-Acceptable output:
-  (priority-donate-one) begin
-  (priority-donate-one) This thread should have priority 32.  Actual priority: 32.
-  (priority-donate-one) This thread should have priority 33.  Actual priority: 33.
-  (priority-donate-one) acquire2: got the lock
-  (priority-donate-one) acquire2: done
-  (priority-donate-one) acquire1: got the lock
-  (priority-donate-one) acquire1: done
-  (priority-donate-one) acquire2, acquire1 must already have finished, in that order.
-  (priority-donate-one) This should be the last line before finishing this test.
-  (priority-donate-one) end
-Differences in `diff -u' format:
-  (priority-donate-one) begin
-- (priority-donate-one) This thread should have priority 32.  Actual priority: 32.
-- (priority-donate-one) This thread should have priority 33.  Actual priority: 33.
-+ (priority-donate-one) This thread should have priority 32.  Actual priority: 31.
-+ (priority-donate-one) This thread should have priority 33.  Actual priority: 31.
-  (priority-donate-one) acquire2: got the lock
-  (priority-donate-one) acquire2: done
-  (priority-donate-one) acquire1: got the lock
-  (priority-donate-one) acquire1: done
-  (priority-donate-one) acquire2, acquire1 must already have finished, in that order.
-  (priority-donate-one) This should be the last line before finishing this test.
-  (priority-donate-one) end
+Kernel panic in run: PANIC at ../../tests/threads/priority-donate-one.c:30 in test_priority_donate_one(): assertion `thread_get_priority () == PRI_DEFAULT' failed.
+Call stack: 0x80042139d7 0x8004217e51 0x8004216e13 0x8004206636 0x8004206783 0x8004206120
+Translation of call stack:
+0x00000080042139d7: debug_panic (lib/kernel/debug.c:32)
+0x0000008004217e51: test_priority_donate_one (tests/threads/priority-donate-one.c:32)
+0x0000008004216e13: run_test (tests/threads/tests.c:57)
+0x0000008004206636: run_task (threads/init.c:252)
+0x0000008004206783: run_actions (threads/init.c:297)
+0x0000008004206120: main (threads/init.c:125)
