@@ -649,11 +649,14 @@ void donate_priority(void){
 }
 
 void priority_preempt(void){
-	struct thread *curr = thread_current();
-	if(!list_empty(&ready_list)){
-		struct thread *ready_first = list_entry(list_front(&ready_list),struct thread, elem);
-		if (curr->priority < ready_first->priority){
-				thread_yield();
-			}
-	}
+	if (thread_current() == idle_thread)
+        return;
+    if (list_empty(&ready_list))
+        return;
+
+    struct thread *curr = thread_current();
+    struct thread *ready = list_entry(list_front(&ready_list), struct thread, elem);
+    if (curr->priority < ready->priority) {
+        thread_yield();
+    }
 }
