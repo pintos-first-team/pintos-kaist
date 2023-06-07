@@ -1,0 +1,20 @@
+Kernel command line: -q -f put syn-read put child-syn-read run syn-read
+0 ~ 9fc00 1
+100000 ~ 13e0000 1
+Pintos booting with: 
+	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
+	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
+Calibrating timer...  107,929,600 loops/s.
+hd0:0: detected 313 sector (156 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 225 sector (112 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+Formatting file system...done.
+Boot complete.
+Putting 'syn-read' into the file system...
+Putting 'child-syn-read' into the file system...
+Executing 'syn-read':
+000000004747ffd0                          00 00 00 00 00 00 00 00 |        ........|
+000000004747ffe0  f7 ff 47 47 00 00 00 00-00 00 00 00 00 00 00 00 |..GG............|
+000000004747fff0  00 00 00 00 00 00 00 73-79 6e 2d 72 65 61 64 00 |.......syn-read.|
+system call!
+TIMEOUT
