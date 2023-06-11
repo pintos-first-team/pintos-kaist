@@ -50,6 +50,10 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
+	/* 받은 commandlind split */
+	char *save_ptr;
+	strtok_r(file_name," ", &save_ptr);
+
 	/* Create a new thread to execute FILE_NAME. */
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
@@ -176,20 +180,62 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+	char *parse[64];
+	char *token, *save_ptr;
+	int count = 0;
+
+	for(token = strtok_r(file_name, " ", &save_ptr); token!=NULL; token=strtok_r(NULL, " ", &save_ptr)){
+		parse[count++] = token;
+	}
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
+
+	argument_stack(parse, count, &_if.rsp);
+	_if.R.rdi = count;
+	_if.R.rsi = (char *)_if.rsp +8 ; 
+
+	hex_dump(_if.rsp, _if.rsp, USER_STACK - (uint64_t)_if.rsp, true);
+
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
+
 	if (!success)
 		return -1;
-
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
 }
 
+void argument_stack(char **parse, int count, void **rsp) {
+	// 프로그램 이름, 인자 문자열 push
+    for (int i = count - 1; i >= 0; i--)
+    {
+        for (int j = strlen(parse[i]); j >=0 ; j--)
+        {
+            (*rsp)--;                      // 스택 주소 감소
+            **(char **)rsp = parse[i][j]; // 주소에 문자 저장
+        }
+        parse[i] = *(char **)rsp; // parse[i]에 현재 rsp의 값 저장해둠(지금 저장한 인자가 시작하는 주소값)
+    }
 
+ 	while ((int)(*rsp) % 8 != 0) { //스택 포인터가 8의 배수가 되도록
+        (*rsp)--;  // 스택 포인터를 1바이트씩 이동
+        **(uint8_t **)rsp = 0;
+    }
+
+    for (int i = count; i >= 0; i--) {
+        (*rsp) -= 8; 
+        if (i == count) //argument의 끝을 나타내는 공백 추가
+			**(char ***)rsp = 0;
+		else // 각각의 argument가 스택에 저장되어있는 주소 저장
+			**(char ***)rsp = parse[i];
+    }
+
+    // return address push
+    (*rsp) -= 8;
+    **(void ***)rsp = 0; // void* 타입의 0 추가
+}
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
  * exception), returns -1.  If TID is invalid or if it was not a
@@ -204,6 +250,10 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	for (int i = 0; i < 1000000000; i++)
+  	{
+  	}	
+  
 	return -1;
 }
 
