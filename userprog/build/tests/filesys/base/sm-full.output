@@ -4,7 +4,7 @@ Kernel command line: -q -f put sm-full run sm-full
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  111,206,400 loops/s.
+Calibrating timer...  61,747,200 loops/s.
 hd0:0: detected 313 sector (156 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 106 sector (53 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -12,7 +12,18 @@ Formatting file system...done.
 Boot complete.
 Putting 'sm-full' into the file system...
 Executing 'sm-full':
-000000004747ffe0  00 00 00 00 00 00 00 00-f8 ff 47 47 00 00 00 00 |..........GG....|
-000000004747fff0  00 00 00 00 00 00 00 00-73 6d 2d 66 75 6c 6c 00 |........sm-full.|
-system call!
-TIMEOUT
+(sm-full) begin
+(sm-full) create "quux"
+(sm-full) open "quux"
+(sm-full) open "quux": FAILED
+sm-full: exit(1)
+Execution of 'sm-full' complete.
+Timer: 70 ticks
+Thread: 30 idle ticks, 36 kernel ticks, 4 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 106 reads, 264 writes
+hd1:0: 106 reads, 0 writes
+Console: 886 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

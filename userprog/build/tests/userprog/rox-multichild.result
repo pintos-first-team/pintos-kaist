@@ -1,2 +1,2 @@
 FAIL
-run: TIMEOUT
+run: open "child-rox": FAILED

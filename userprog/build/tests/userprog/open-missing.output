@@ -4,7 +4,7 @@ Kernel command line: -q -f put open-missing run open-missing
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  157,081,600 loops/s.
+Calibrating timer...  131,072,000 loops/s.
 hd0:0: detected 313 sector (156 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 103 sector (51 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -12,8 +12,16 @@ Formatting file system...done.
 Boot complete.
 Putting 'open-missing' into the file system...
 Executing 'open-missing':
-000000004747ffd0                          00 00 00 00 00 00 00 00 |        ........|
-000000004747ffe0  f3 ff 47 47 00 00 00 00-00 00 00 00 00 00 00 00 |..GG............|
-000000004747fff0  00 00 00 6f 70 65 6e 2d-6d 69 73 73 69 6e 67 00 |...open-missing.|
-system call!
-TIMEOUT
+(open-missing) begin
+(open-missing) end
+open-missing: exit(0)
+Execution of 'open-missing' complete.
+Timer: 74 ticks
+Thread: 30 idle ticks, 41 kernel ticks, 3 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 97 reads, 234 writes
+hd1:0: 103 reads, 0 writes
+Console: 864 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

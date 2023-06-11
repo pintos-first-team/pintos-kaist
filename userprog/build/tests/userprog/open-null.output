@@ -4,7 +4,7 @@ Kernel command line: -q -f put open-null run open-null
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  157,081,600 loops/s.
+Calibrating timer...  144,179,200 loops/s.
 hd0:0: detected 313 sector (156 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 102 sector (51 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -12,8 +12,15 @@ Formatting file system...done.
 Boot complete.
 Putting 'open-null' into the file system...
 Executing 'open-null':
-000000004747ffd0                          00 00 00 00 00 00 00 00 |        ........|
-000000004747ffe0  f6 ff 47 47 00 00 00 00-00 00 00 00 00 00 00 00 |..GG............|
-000000004747fff0  00 00 00 00 00 00 6f 70-65 6e 2d 6e 75 6c 6c 00 |......open-null.|
-system call!
-TIMEOUT
+(open-null) begin
+open-null: exit(-1)
+Execution of 'open-null' complete.
+Timer: 72 ticks
+Thread: 30 idle ticks, 40 kernel ticks, 2 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 80 reads, 232 writes
+hd1:0: 102 reads, 0 writes
+Console: 825 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

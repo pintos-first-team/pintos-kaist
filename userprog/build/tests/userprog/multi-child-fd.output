@@ -4,7 +4,7 @@ Kernel command line: -q -f put multi-child-fd put sample.txt put child-close run
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  117,760,000 loops/s.
+Calibrating timer...  144,179,200 loops/s.
 hd0:0: detected 313 sector (156 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 220 sector (110 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -14,8 +14,17 @@ Putting 'multi-child-fd' into the file system...
 Putting 'sample.txt' into the file system...
 Putting 'child-close' into the file system...
 Executing 'multi-child-fd':
-000000004747ffd0                          00 00 00 00 00 00 00 00 |        ........|
-000000004747ffe0  f1 ff 47 47 00 00 00 00-00 00 00 00 00 00 00 00 |..GG............|
-000000004747fff0  00 6d 75 6c 74 69 2d 63-68 69 6c 64 2d 66 64 00 |.multi-child-fd.|
-system call!
-TIMEOUT
+(multi-child-fd) begin
+(multi-child-fd) open "sample.txt"
+(multi-child-fd) open "sample.txt": FAILED
+multi-child-fd: exit(1)
+Execution of 'multi-child-fd' complete.
+Timer: 95 ticks
+Thread: 30 idle ticks, 60 kernel ticks, 5 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 148 reads, 488 writes
+hd1:0: 220 reads, 0 writes
+Console: 1061 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

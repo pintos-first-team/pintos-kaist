@@ -4,7 +4,7 @@ Kernel command line: -q -f put close-twice put sample.txt run close-twice
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  157,081,600 loops/s.
+Calibrating timer...  131,072,000 loops/s.
 hd0:0: detected 313 sector (156 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 105 sector (52 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -13,8 +13,17 @@ Boot complete.
 Putting 'close-twice' into the file system...
 Putting 'sample.txt' into the file system...
 Executing 'close-twice':
-000000004747ffd0                          00 00 00 00 00 00 00 00 |        ........|
-000000004747ffe0  f4 ff 47 47 00 00 00 00-00 00 00 00 00 00 00 00 |..GG............|
-000000004747fff0  00 00 00 00 63 6c 6f 73-65 2d 74 77 69 63 65 00 |....close-twice.|
-system call!
-TIMEOUT
+(close-twice) begin
+(close-twice) open "sample.txt"
+(close-twice) open "sample.txt": FAILED
+close-twice: exit(1)
+Execution of 'close-twice' complete.
+Timer: 77 ticks
+Thread: 30 idle ticks, 43 kernel ticks, 4 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 111 reads, 248 writes
+hd1:0: 105 reads, 0 writes
+Console: 971 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

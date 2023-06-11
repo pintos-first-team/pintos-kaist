@@ -4,7 +4,7 @@ Kernel command line: -q -f put args-many run 'args-many a b c d e f g h i j k l 
 Pintos booting with: 
 	base_mem: 0x0 ~ 0x9fc00 (Usable: 639 kB)
 	ext_mem: 0x100000 ~ 0x13e0000 (Usable: 19,328 kB)
-Calibrating timer...  157,081,600 loops/s.
+Calibrating timer...  145,612,800 loops/s.
 hd0:0: detected 313 sector (156 kB) disk, model "QEMU HARDDISK", serial "QM00001"
 hd0:1: detected 20,160 sector (9 MB) disk, model "QEMU HARDDISK", serial "QM00002"
 hd1:0: detected 102 sector (51 kB) disk, model "QEMU HARDDISK", serial "QM00003"
@@ -12,21 +12,41 @@ Formatting file system...done.
 Boot complete.
 Putting 'args-many' into the file system...
 Executing 'args-many a b c d e f g h i j k l m n o p q r s t u v':
-000000004747ff00  00 00 00 00 00 00 00 00-ca ff 47 47 00 00 00 00 |..........GG....|
-000000004747ff10  d4 ff 47 47 00 00 00 00-d6 ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ff20  d8 ff 47 47 00 00 00 00-da ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ff30  dc ff 47 47 00 00 00 00-de ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ff40  e0 ff 47 47 00 00 00 00-e2 ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ff50  e4 ff 47 47 00 00 00 00-e6 ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ff60  e8 ff 47 47 00 00 00 00-ea ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ff70  ec ff 47 47 00 00 00 00-ee ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ff80  f0 ff 47 47 00 00 00 00-f2 ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ff90  f4 ff 47 47 00 00 00 00-f6 ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ffa0  f8 ff 47 47 00 00 00 00-fa ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ffb0  fc ff 47 47 00 00 00 00-fe ff 47 47 00 00 00 00 |..GG......GG....|
-000000004747ffc0  00 00 00 00 00 00 00 00-00 00 61 72 67 73 2d 6d |..........args-m|
-000000004747ffd0  61 6e 79 00 61 00 62 00-63 00 64 00 65 00 66 00 |any.a.b.c.d.e.f.|
-000000004747ffe0  67 00 68 00 69 00 6a 00-6b 00 6c 00 6d 00 6e 00 |g.h.i.j.k.l.m.n.|
-000000004747fff0  6f 00 70 00 71 00 72 00-73 00 74 00 75 00 76 00 |o.p.q.r.s.t.u.v.|
-system call!
-TIMEOUT
+(args) begin
+(args) argc = 23
+(args) argv[0] = 'args-many'
+(args) argv[1] = 'a'
+(args) argv[2] = 'b'
+(args) argv[3] = 'c'
+(args) argv[4] = 'd'
+(args) argv[5] = 'e'
+(args) argv[6] = 'f'
+(args) argv[7] = 'g'
+(args) argv[8] = 'h'
+(args) argv[9] = 'i'
+(args) argv[10] = 'j'
+(args) argv[11] = 'k'
+(args) argv[12] = 'l'
+(args) argv[13] = 'm'
+(args) argv[14] = 'n'
+(args) argv[15] = 'o'
+(args) argv[16] = 'p'
+(args) argv[17] = 'q'
+(args) argv[18] = 'r'
+(args) argv[19] = 's'
+(args) argv[20] = 't'
+(args) argv[21] = 'u'
+(args) argv[22] = 'v'
+(args) argv[23] = null
+(args) end
+args-many: exit(0)
+Execution of 'args-many' complete.
+Timer: 73 ticks
+Thread: 30 idle ticks, 34 kernel ticks, 10 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 80 reads, 232 writes
+hd1:0: 102 reads, 0 writes
+Console: 1465 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

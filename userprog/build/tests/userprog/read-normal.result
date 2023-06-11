@@ -1,2 +1,2 @@
 FAIL
-run: TIMEOUT
+run: open "sample.txt" for verification: FAILED
