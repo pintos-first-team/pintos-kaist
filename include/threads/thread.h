@@ -1,10 +1,14 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
+#define FDT_PAGES 2
+#define FDT_COUNT_LIMIT 128
+
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
 #include "threads/interrupt.h"
+#include "include/threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -99,6 +103,17 @@ struct thread {
 	struct list donations;	            /* 도네이션이 가능한 모든 목록*/
 	struct list_elem donation_elem;     /* 도네이션 리스트에 넣을 주소*/
 	int original_priority;	            /* 본래의 우선순위*/
+
+	int exit_status;
+	struct file **fdt;
+	int next_fd;
+	struct intr_frame parent_if;
+	struct list child_list;
+	struct list_elem child_elem;
+	struct semaphore load_sema;
+	struct semaphore exit_sema;
+	struct semaphore wait_sema;
+	struct file *running;
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
