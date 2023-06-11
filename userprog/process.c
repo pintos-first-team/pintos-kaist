@@ -98,6 +98,18 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	// child 스레드 생성되고, ready_list에 들어가서 실행될 때 까지 (__do_fork함수 실행될 때 까지) 부모는 대기
 	sema_down(&child->load_sema);
 
+	// 자식이 로드되다가 오류로 exit한 경우
+	if (child->exit_status == -2)
+	{
+		// 자식이 종료되었으므로 자식 리스트에서 제거한다.
+		// 이거 넣으면 간헐적으로 실패함 (syn-read)
+		// list_remove(&child->child_elem);
+		// 자식이 완전히 종료되고 스케줄링이 이어질 수 있도록 자식에게 signal을 보낸다.
+		sema_up(&child->exit_sema);
+		// 자식 프로세스의 pid가 아닌 TID_ERROR를 반환한다.
+		return TID_ERROR;
+	}
+
 	return pid;
 }
 

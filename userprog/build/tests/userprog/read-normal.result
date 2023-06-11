@@ -1,2 +1,1 @@
-FAIL
-run: open "sample.txt" for verification: FAILED
+PASS

@@ -1,2 +1,2 @@
 FAIL
-run: should have forked at least 149 times, but 104 times forked: FAILED
+run: Should return > 0.: FAILED
